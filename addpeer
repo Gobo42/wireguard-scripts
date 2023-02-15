@@ -1,13 +1,17 @@
 #!/usr/bin/bash
 
-
+if [-z $1]; then
+	echo "Usage: addpeer <peername>"
+	echo "MUST be run as root"
+	exit 1
+fi
 if [[ $EUID > 0 ]]; then
 	echo "Run this with sudo"
 	exit 1
 fi
 peer=$1
 if [ ! -d "$peer" ]; then
-       echo "Directory ${peer} is missing"
+       echo "Peer directory ${peer} is missing"
        exit 1
 fi
 cd $peer
@@ -28,5 +32,9 @@ echo "[Peer]" >> ${wgconf}
 echo "PublicKey = $(cat ${peer}.pub.key)" >> ${wgconf}
 echo "AllowedIPs = $(cat peernet), $(cut -d/ -f1 peeraddr)/32" >> ${wgconf}
 echo "PersistentKeepalive = 30" >> ${wgconf}
-#wg syncconf wg0 /etc/wireguard/wg0.conf
-systemctl reload wg-quick@wg0
+echo "Starting Wireguard"
+if ! systemctl is-active --quiet wg-quick@wg0; then
+	systemctl start wg-quick@wg0
+else
+	systemctl reload wg-quick@wg0
+fi
