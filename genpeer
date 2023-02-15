@@ -3,7 +3,7 @@
 peer=$1
 if [ ! -d "$peer" ]; then
        echo "Directory ${peer} is missing"
-       echo "Usage: genpeercfg <peer name>"
+       echo "Usage: genpeer <peer name>"
        exit 1
 fi
 cd $peer

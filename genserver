@@ -21,8 +21,12 @@ if [ -z $2 ] || ! [[ $2 =~ ^[0-9]+$ ]]; then
 else
 	port=$2
 fi
+echo "Enter a comma separated list of local subnets that the remote client can access"
+echo "for example: 10.0.0.0/16, 172.16.8.0/22"
+read serverips
 ip=$1
 chmod 755 /etc/wireguard
+echo "$serverips" > /etc/wireguard/serverips
 serverkey=$(wg genkey)
 $(echo "$serverkey" | wg pubkey > /etc/wireguard/server.pub.key)
 chmod 644 /etc/wireguard/server.pub.key
