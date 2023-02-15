@@ -1,0 +1,39 @@
+#!/usr/bin/bash
+
+
+if [ $# -eq 0 ]; then
+	echo "Usage: genserver <CIDR ip of server> [port]"
+	echo "MUST be run as root"
+        echo "CIDR ip of server indicates the ip of the wireguard interface it will use inside the tunnels"
+	echo "an example is 172.16.0.1/24"
+	exit 1
+fi
+if [[ $EUID > 0 ]]; then
+	echo "Run this with sudo"
+	exit 1
+fi
+if [ -f /etc/wireguard/wg0.conf ]; then
+	echo "you already have a server config"
+	exit 1
+fi
+if [ -z $2 ] || ! [[ $2 =~ ^[0-9]+$ ]]; then
+	port=51820
+else
+	port=$2
+fi
+ip=$1
+chmod 755 /etc/wireguard
+serverkey=$(wg genkey)
+$(echo "$serverkey" | wg pubkey > /etc/wireguard/server.pub.key)
+chmod 644 /etc/wireguard/server.pub.key
+echo "$ip" > /etc/wireguard/tunnelnet
+chmod 644 /etc/wireguard/tunnelnet
+echo "[Interface]">/etc/wireguard/wg0.conf
+echo "Address = $ip">>/etc/wireguard/wg0.conf
+echo "ListenPort = $port">>/etc/wireguard/wg0.conf
+echo "PrivateKey = $serverkey">>/etc/wireguard/wg0.conf
+echo "">>/etc/wireguard/wg0.conf
+chmod 600 /etc/wireguard/wg0.conf
+echo "Created server config"
+systemctl enable wg-quick@wg0
+echo "Now create and then add peers to wireguard"
