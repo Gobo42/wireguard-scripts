@@ -1,0 +1,32 @@
+#!/usr/bin/bash
+
+
+if [[ $EUID > 0 ]]; then
+	echo "Run this with sudo"
+	exit 1
+fi
+peer=$1
+if [ ! -d "$peer" ]; then
+       echo "Directory ${peer} is missing"
+       exit 1
+fi
+cd $peer
+if [ ! -f peeraddr ] || [ ! -f peernet ]; then
+        echo "Missing required files"
+        exit 1
+fi
+wgconf="/etc/wireguard/wg0.conf"
+
+if $(grep -q $(cat ${peer}.pub.key) ${wgconf}); then
+	echo "This peer already exists"
+	exit 1
+fi
+
+echo "Peer doesn't exist. adding"
+echo "" >> ${wgconf}
+echo "[Peer]" >> ${wgconf}
+echo "PublicKey = $(cat ${peer}.pub.key)" >> ${wgconf}
+echo "AllowedIPs = $(cat peernet), $(cut -d/ -f1 peeraddr)/32" >> ${wgconf}
+echo "PersistentKeepalive = 30" >> ${wgconf}
+#wg syncconf wg0 /etc/wireguard/wg0.conf
+systemctl reload wg-quick@wg0

@@ -1,0 +1,32 @@
+#!/usr/bin/bash
+
+peer=$1
+if [ ! -d "$peer" ]; then
+       echo "Directory ${peer} is missing"
+       echo "Usage: genpeercfg <peer name>"
+       exit 1
+fi
+cd $peer
+if [ ! -f peeraddr ] || [ ! -f peernet ]; then
+	echo "Missing required files"
+	exit 1
+fi
+if [ ! -f ${peer}.key ]; then wg genkey | tee ${peer}.key | wg pubkey > ${peer}.pub.key; fi
+
+echo "[Interface]">config
+echo "PrivateKey = $(cat ${peer}.key)" >>config
+echo "Address = $(cat peeraddr)" >>config
+echo "">>config
+echo "[Peer]">>config
+echo "PublicKey = $(cat /etc/wireguard/server.pub.key)">>config
+echo "AllowedIPs = $(cat /etc/wireguard/serverips), $(ip -4 -o address show dev wg0 | awk '{print $4}' | cut -d/ -f1)/32">>config
+#serverip=$(ip -4 -o address show dev eth0 | awk '{print $4}' | cut -d/ -f1)
+serverip=$(curl -s ifconfig.me)
+serverport=51820
+echo "Endpoint = ${serverip}:${serverport}">>config
+echo "PersistentKeepalive = 30">>config
+chmod 644 *
+
+echo "Copy config to /etc/wireguard/wg0.conf on the remote host then run:"
+echo "sudo systemctl enable wg-quick@wg0"
+echo "sudo systemctl start wg-quick@wg0"
